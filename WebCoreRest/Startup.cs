@@ -42,12 +42,16 @@ namespace WebCoreRest
 
             app.UseRouting();
 
+            // подключаем CORS
+            app.UseCors(builder => builder.AllowAnyOrigin());
+
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
             });
+
 
             app.Run(async (context) =>
             {
