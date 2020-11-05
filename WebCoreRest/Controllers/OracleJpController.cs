@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -8,106 +9,108 @@ using Oracle.ManagedDataAccess.Client;
 
 namespace WebCoreRest.Controllers
 {
-	[Route("api/GetJurpers")]
+    public class Jurpers
+    {
+        public Int64 rn { get; set; }
+        public string code { get; set; }
+        public string name { get; set; }
+    }
+
+    [Route("api/GetJurpers")]
 	[ApiController]
 	public class OracleJpController : ControllerBase
 	{
-		[HttpGet]
-		public string Get() 
+        [HttpGet]
+        [Produces("application/json")]
+        public IEnumerable<Jurpers> Get()
         {
-
-			//Create a connection to Oracle			
-			string conString = "User Id=parus;Password=2wsxZAQ1q;" +
-
-			//How to connect to an Oracle DB without SQL*Net configuration file
-			//  also known as tnsnames.ora.
-			//"Data Source=miacyp";
-			"Data Source=192.168.0.242:1521/miac";
-            using (OracleConnection con = new OracleConnection(conString))
-            {
-                using (OracleCommand cmd = con.CreateCommand())
-                {
-                    var context = HttpContext;
-                    try
-                    {
-
-                        con.Open();
-                        cmd.BindByName = true;
-
-                        cmd.CommandText = "select RN, CODE, NAME from JURPERSONS /*where CODE = :agnabbr*/";
-
-                        // Assign id to the department number 50 
-                        ///OracleParameter id = new OracleParameter("id", 50);
-                        //cmd.Parameters.Add(id);
-                        //OracleParameter agnabbr = new OracleParameter("agnabbr", "6283");
-                        //cmd.Parameters.Add(agnabbr);
-
-                        //Execute the command and use DataReader to display the data
-                        
-                        Task<string> content;
-                        OracleDataReader reader = cmd.ExecuteReader();
-                        context.Response.Headers["Content-Type"] = "text/plain; charset=utf-8";
-                        while (reader.Read())
-                        {
-                            context.Response.WriteAsync(reader.GetString(0) + " " + reader.GetString(1) + " " + reader.GetString(2) + "\n");
-                        }
-                        return reader.ToString();
-                        //reader.Dispose();
-                    }
-                    catch (Exception ex)
-                    {
-                       return context.Response.WriteAsync(ex.Message).ToString();
-                    }
-                    con.Close();
-                }
-            }
-        }
-
-        [HttpGet("{code}")]
-        public string Get(string code)
-        {
-
             //Create a connection to Oracle			
             string conString = "User Id=parus;Password=2wsxZAQ1q;" +
-
-            //How to connect to an Oracle DB without SQL*Net configuration file
-            //  also known as tnsnames.ora.
-            //"Data Source=miacyp";
             "Data Source=192.168.0.242:1521/miac";
-            using (OracleConnection con = new OracleConnection(conString))
+
+            OracleConnection con = new OracleConnection(conString);
+            con.Open();
+
+            string cmdQuery = "select RN, CODE, NAME from JURPERSONS";
+
+            // Create the OracleCommand
+            OracleCommand cmd = new OracleCommand(cmdQuery);
+
+            try
             {
-                using (OracleCommand cmd = con.CreateCommand())
+                cmd.Connection = con;
+                cmd.CommandType = CommandType.Text;
+
+                // Execute command, create OracleDataReader object
+                OracleDataReader reader = cmd.ExecuteReader();
+
+                var JurpersList = new List<Jurpers>();
+
+                while (reader.Read())
                 {
-                    var context = HttpContext;
-                    try
+                    JurpersList.Add(new Jurpers
                     {
-
-                        con.Open();
-                        cmd.BindByName = true;
-
-                        cmd.CommandText = "select RN, CODE, NAME from JURPERSONS where CODE = :code";
-                        OracleParameter jp_code = new OracleParameter("code", code);
-                        cmd.Parameters.Add(jp_code);
-
-                        //Execute the command and use DataReader to display the data
-
-                        Task<string> content;
-                        OracleDataReader reader = cmd.ExecuteReader();
-                        context.Response.Headers["Content-Type"] = "text/plain; charset=utf-8";
-                        while (reader.Read())
-                        {
-                            context.Response.WriteAsync(reader.GetString(0) + " " + reader.GetString(1) + " " + reader.GetString(2) + "\n");
-                        }
-                        return reader.ToString();
-                        //reader.Dispose();
-                    }
-                    catch (Exception ex)
-                    {
-                        return context.Response.WriteAsync(ex.Message).ToString();
-                    }
-                    con.Close();
+                        rn = reader.GetInt64(0),
+                        code = reader.GetString(1),
+                        name = reader.GetString(2)
+                    });
                 }
+                return JurpersList;
             }
+            catch (Exception ex)
+            {
+                throw ex;
+                //return ex..Message.ToString();
+            }
+            con.Close();
+
+        }
+       
+
+        [HttpGet("{code}")]
+        [Produces("application/json")]
+        public IEnumerable<Jurpers> Get(string code)
+        {
+            string conString = "User Id=parus;Password=2wsxZAQ1q;" +
+            "Data Source=192.168.0.242:1521/miac";
+
+            OracleConnection con = new OracleConnection(conString);
+            OracleParameter jp_code = new OracleParameter("code", code);
+            con.Open();
+
+            string cmdQuery = "select RN, CODE, NAME from JURPERSONS where CODE = :code";
+
+            // Create the OracleCommand
+            OracleCommand cmd = new OracleCommand(cmdQuery);
+
+            try
+            {
+                cmd.Connection = con;
+                cmd.CommandType = CommandType.Text;
+                cmd.Parameters.Add(jp_code);
+
+                // Execute command, create OracleDataReader object
+                OracleDataReader reader = cmd.ExecuteReader();
+
+                var JurpersList = new List<Jurpers>();
+
+                while (reader.Read())
+                {
+                    JurpersList.Add(new Jurpers
+                    {
+                        rn = reader.GetInt64(0),
+                        code = reader.GetString(1),
+                        name = reader.GetString(2)
+                    });
+                }
+                return JurpersList;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+                //return ex..Message.ToString();
+            }
+            con.Close();
         }
 
     }
